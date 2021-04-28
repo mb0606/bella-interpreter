@@ -1,179 +1,172 @@
 function interpret(program) {
-  return new P(program)
+  return P(program);
 }
 
 const P = (program) => {
-  let statements = program.body
-  let w = [{}, []]
-  for(let s of statements){
-    w = S(s)(w)
+  let statements = program.body;
+  let w = [{}, []];
+  for (let s of statements) {
+    w = S(s)(w);
   }
-  return w[1]
-}
-const S = (statement)=> ([memory, output]) =>{
-  if(statement.constructor === VariableDecaration){
+  return w[1];
+};
 
+const S = (statement) => ([memory, output]) => {
+  if (statement.constructor === VariableDeclaration) {
+    let { variable, initializer } = statement;
+    return [{ ...memory, [variable]: E(initializer)(memory) }, output];
+  } else if (statement.constructor === PrintStatement) {
+    let { argument } = statement;
+    return [memory, [...output, E(argument)(memory)]];
+  } else if (statement.constructor === Assignment) {
+  } else if (statement.constructor === WhileStatement) {
+  } else if (statement.constructor === FunctionDeclaration) {
   }
-  else if (statement.constructor === PrintStatement){
-    let {arguments} = statement
-    return [(memory, output.concat(E(argument)(memory)))]
-  }
-  else if(statement.constructor === WhileStatement){
+};
 
-  }
-  if(statement.constructor === VariableDecaration){
-
-  }
-
-}
-const  E = (expression) =>( memory) => {
-  if(typeof expression === 'number'){
-    return expression
-  } else if(typeof expression === "string"){
-    const i = expression
-    return memory[i] // 
-  } else if (expression.constructor === Unary ){
-    return -E(expression)(memory)
-  } else if (expression.constructor === Binary){
-    const {op, right, left} = expression
-    switch(op){
+const E = (expression) => (memory) => {
+  if (typeof expression === "number") {
+    return expression;
+  } else if (typeof expression == "string") {
+    const i = expression;
+    return memory[i];
+  } else if (expression.constructor === Unary) {
+    return -E(expression)(memory);
+  } else if (expression.constructor === Binary) {
+    const { op, left, right } = expression;
+    switch (op) {
       case "+":
-        return E(right)(memory) + E(left)(memory)
+        return E(left)(memory) + E(right)(memory);
       case "-":
-        return E(right)(memory) - E(left)(memory)
+        return E(left)(memory) - E(right)(memory);
       case "*":
-        return E(right)(memory) * E(left)(memory)
+        return E(left)(memory) * E(right)(memory);
       case "/":
-        return E(right)(memory) / E(left)(memory)
+        return E(left)(memory) / E(right)(memory);
+      case "%":
+        return E(left)(memory) % E(right)(memory);
       case "**":
-        return E(right)(memory) ** E(left)(memory)
-      // case "**":
-      //   return E(right)(memory) ** E(left)(memory)
+        return E(left)(memory) ** E(right)(memory);
     }
-    return -E(expression)(memory)
   }
-}
-const C = (condition) => (memory) =>  {
-  if(condition === true) {
-    return true
-  } else if(condition === false){
-    return false
-  } else if(condition.constructor === Binary){
-    const {op, right, left} = condition
-    const x = E(right)(memory)
-    const y = E(left)(memory)
-    switch(op) {
+};
+
+const C = (condition) => (memory) => {
+  if (condition === true) {
+    return true;
+  } else if (condition === false) {
+    return false;
+  } else if (condition.constructor === Binary) {
+    const { op, left, right } = condition;
+    switch (op) {
       case "==":
-        return  E(right)(memory) == E(left)(memory)
+        return E(left)(memory) === E(right)(memory);
       case "!=":
-        return  E(right)(memory) != E(left)(memory)
+        return E(left)(memory) !== E(right)(memory);
       case "<":
-        return  E(right)(memory) < E(left)(memory)
+        return E(left)(memory) < E(right)(memory);
       case "<=":
-        return  E(right)(memory) <= E(left)(memory)
+        return E(left)(memory) <= E(right)(memory);
       case ">":
-        return  E(right)(memory) > E(left)(memory)
+        return E(left)(memory) >= E(right)(memory);
       case ">=":
-        return  right >= left
+        return E(left)(memory) >= E(right)(memory);
       case "&&":
-        return  C(left)(memory) >= C(left)(memory)
-      case ">=":
-        return  C(left)(memory) >= C(left)(memory)
+        return C(left)(memory) && C(right)(memory);
+      case "||":
+        return C(left)(memory) || C(right)(memory);
     }
-  
-  } else if(condition.constructor === Unary){
-    return !C(operand)(memory)
+  } else if (condition.constructor === Unary) {
+    const { op, operand } = condition;
+    return !C(operand)(memory);
   }
-}
+  // FOR YOU: HANDLE CALLS
 
+  // FOR YOU: HANDLE CONDITIONAL EXPRESSION (?:)
+};
 
-///// nodes
 class Program {
   constructor(body) {
-    Object.assign(this, {body})
+    this.body = body;
+  }
+}
+
+class VariableDeclaration {
+  constructor(variable, initializer) {
+    Object.assign(this, { variable, initializer });
+  }
+}
+
+class FunctionDeclaration {
+  constructor(name, parameters, body) {
+    Object.assign(this, { name, parameters, body });
+  }
+}
+
+class PrintStatement {
+  constructor(argument) {
+    this.argument = argument;
   }
 }
 
 class WhileStatement {
-  constructor(c, b) {
-    Object.assign(this, {c, b})
+  constructor(test, body) {
+    Object.assign(this, { test, body });
   }
 }
-class VariableDecaration {
-  constructor(variable, initializer) {
-    Object.assign(this, {variable, initializer})
+
+class Assignment {
+  constructor(target, source) {
+    Object.assign(this, { target, source });
   }
-}
-class Assignment{
-  constructor()
 }
 
 class Binary {
-  constructor(op, left, right){
-    Object.assign(this, {op, left, right})
+  constructor(op, left, right) {
+    Object.assign(this, { op, left, right });
   }
 }
+
 class Unary {
   constructor(op, operand) {
-    Object.assign(this, {op, operand})
-  }
-}
-class PrintStatement {
-  constructor(arguments){
-    this.arguments = arguments
+    Object.assign(this, { op, operand });
   }
 }
 
-class FunctionDeclaration{
-  constructor(name, parameters, body){
-    Object.assign(this, name, parameters,body )
-  }
-}
+const program = (s) => new Program(s);
+const vardec = (i, e) => new VariableDeclaration(i, e);
+const print = (e) => new PrintStatement(e);
+const whileLoop = (c, b) => new WhileStatement(c, b);
+const plus = (x, y) => new Binary("+", x, y);
+const minus = (x, y) => new Binary("-", x, y);
+const times = (x, y) => new Binary("*", x, y);
+const remainder = (x, y) => new Binary("%", x, y);
+const power = (x, y) => new Binary("**", x, y);
+const eq = (x, y) => new Binary("==", x, y);
+const noteq = (x, y) => new Binary("!=", x, y);
+const less = (x, y) => new Binary("<", x, y);
+const lesseq = (x, y) => new Binary("<=", x, y);
+const greater = (x, y) => new Binary(">", x, y);
+const greatereq = (x, y) => new Binary(">=", x, y);
+const and = (x, y) => new Binary("&&", x, y);
+const or = (x, y) => new Binary("||", x, y);
 
+// console.log(interpret(program([vardec("x", 2), print("x")])))
 
+// console.log(
+//   program([
+//     vardec("x", 3),
+//     whileLoop(less("x", 10), [print("x"), assign("x", plus("x", 2))]),
+//   ])
+// )
 
-const program = s => new Program(s)
-const vardec = (i, e) => new VariableDecaration(i, e)
-const print = (e) =>  new Print(e)
-const whileLoop = (c, b) => new WhileStatement(c, b)
-const plus = (x, y) => new Binary("+", x, y)
-const minus =(x, y) => new Binary("-", x, y)
-const times =(x, y) => new Binary("*", x, y)
-const remainder = (x, y) => new Binary("%", x, y)
-const power = (x, y) => new Binary("**", x, y)
-const eq = (x, y) => new Binary("==", x, y)
-const nteq = (x, y) => new Binary("!=", x, y)
-const less = (x, y) => new Binary("<", x, y)
-const lesseg = (x, y) => new Binary("<=", x, y)
-const greater = (x, y) => new Binary(">", x, y)
-const greatereg = (x, y) => new Binary(">=", x, y)
-const and = (x, y)  => new Binary("&&", x, y)
-const or = (x, y)  => new Binary("||", x, y)
-
-const assign = (i, e) => new Assignment(i, e)
-
-
-
-
-
-
-console.log(interpret(
-  program([
-    vardec("x", 2), 
-    print("x")
-  ])
-))
-
-
-console.log(interpret(
-  program([
-    vardec("x", 10), 
-    whileLoop(less("x", 10), [
-      print("x"), 
-      assign("x", plus("x", 2)),
+console.log(
+  P(
+    program([
+      vardec("x", 3),
+      vardec("y", plus("x", 10)),
+      print("x"),
+      print("y"),
     ])
-  ])
-))
-
-console.log(E(plus("x", "y")))({x:5, y: 5})
-
+  )
+);

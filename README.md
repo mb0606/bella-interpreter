@@ -1,4 +1,4 @@
-# bella-interpreter
+# Bella Semantics and Interpreter
 
 Bella is a simple programming language designed in a Programming Language Semantics class.
 
@@ -25,56 +25,59 @@ i: Ide
 n: Numeral
 
 Prog ::= s*
-Exp ::= n | i | e + e | e * e | e / e
-     | e ** e | - e | i e* | c ? e1 : e2
+Exp  ::= n | i | e + e | e - e | e * e | e / e
+      |  e ** e | - e | i e* | c ? e1 : e2
 Cond ::= true | false | ~ c | c && c | c || c
-     | e == e | e != e | e <= e | e < e | e >= e
-     | e > e
+      |  e == e | e != e | e < e | e <= e
+      |  e > e | e >= e
 Stmt ::= let i e | i = e | while c s* | print e
-     | fun i i* e
+      |  fun i i* e
 ```
 
 ## Denotational Semantics
 
 ```
 type File = Num*
-type Memory = Ide -> Num
+type Memory = Ide -> Num  (in JS, a Map; in Python a dict)
 type State = Memory x File
 
-P: Prog -> Num*
+P: Prog -> File
 E: Exp -> Memory -> Num
 S: Stmt -> State -> State
 C: Cond -> Memory -> Bool
 
-P[[s*]] = ______
-S [[let i e]] (m,o) = ------
-S [[i = e]] (m,o) =
-S [[print e]] (m, o) = (m, o + E [[e]] m)
-S [[while c do s*]] (m,o)
+P [[s*]] = S*[[s*]]({}, [])
 
-E[[n]] m = n
-E[[n]] m = m i
-E [[e1 + e2]] m = E [[e1]] + E [[e2]] m
-E [[e1 - e2]] m = E [[e1]] - E [[e2]] m
-E [[e1 * e2]] m = E [[e1]] * E [[e2]] m
-E [[e1 % e2]] m = E [[e1]] % E [[e2]] m
-E [[e1 ** e2]] m = E [[e1]] ** E [[e2]] m
-E [[-e]] m = - E [[e]] m
-E [[i e*]] m =  -------m
-E [[c ? e1 : e2]] m = ------ m
+S [[let i e]] (m,o) = (m[i])
+S [[fun i i* e]] (m,o) = (m[(i*, e)/f], o)
+S [[i = e]] (m,o) = (m [E[e]]m/x],o)
+S [[print e]] (m,o) = (m, o + E [[e]] m)
+S [[while c do s*]] (m,o) = if C [[c]] m = F then (m,o)
+                            else (S [[while c do ]]) (S* [[s*]] (m,o))
 
-
+E [[n]] m = n
+E [[i]] m = m i
+E [[e1 + e2]] m = E [[e1]] m + E [[e2]] m
+E [[e1 - e2]] m = E [[e1]] m - E [[e2]] m
+E [[e1 * e2]] m = E [[e1]] m * E [[e2]] m
+E [[e1 / e2]] m = E [[e1]] m / E [[e2]] m
+E [[e1 % e2]] m = E [[e1]] m % E [[e2]] m
+E [[e1 ** e2]] m = E [[e1]] m ** E [[e2]] m
+E [[- e]] m = - E [[e]] m
+E [[i(a*)]] m = let (p*,e) = m[i] in E[[e]] m[E[ai]m / pi]]i
+E [[c ? e1 : e2]] m = if E [[c]] m = T then E [[e1]] m else E [[e2]] m
 
 C [[true]] m = T
 C [[false]] m = F
-C [[e1 == e2]] m = E [[e1]] m  = E [[e2]] m
-C [[e1 != e2]] m = not (E [[e1]] m  = E [[e2]] m)
+C [[e1 == e2]] m = E [[e1]] m = E [[e2]] m
+C [[e1 != e2]] m = not (E [[e1]] m = E [[e2]] m)
 C [[e1 < e2]] m = E [[e1]] m < E [[e2]] m
 C [[e1 <= e2]] m = E [[e1]] m <= E [[e2]] m
 C [[e1 > e2]] m = E [[e1]] m > E [[e2]] m
 C [[e1 >= e2]] m = E [[e1]] m >= E [[e2]] m
-
-C [[~c]] m = not C [[c]] m
-C [[c1 && c2]] m = if C [[c1]] m then C[[c2]] m else F
-C [[c1 && c2]] m = if C [[c1]] m then T else C[[c2]] m
+C [[~c]] m = not (C [[c]] m)
+C [[c1 && c2]] m = if C [[c1]] m then C [[c2]] m else F
+C [[c1 || c2]] m = if C [[c1]] m then T else C [[c2]] m
 ```
+
+## Using the Interpreter
