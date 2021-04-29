@@ -12,78 +12,76 @@ const P = (program) => {
 }
 
 const S = (statement) => ([memory, output]) => {
-  console.log("in statement")
   if (statement.constructor === VariableDeclaration) {
     let { variable, initializer } = statement
-    let test = [{ ...memory, [variable]: E(initializer)(memory) }, output]
-    console.log("this is memory: ", test)
+    let test = [
+      { ...memory, [variable]: E(initializer)([memory, output]) },
+      output,
+    ]
     return test
   } else if (statement.constructor === PrintStatement) {
     let { argument } = statement
-    return [memory, [...output, E(argument)(memory)]]
+    return [memory, [...output, E(argument)([memory, output])]]
   } else if (statement.constructor === Assignment) {
     const { target, source } = statement
-    return [{ ...memory, [target]: E(source)(memory) }, output]
+    return [{ ...memory, [target]: E(source)([memory, output]) }, output]
   } else if (statement.constructor === WhileStatement) {
     const { test, body } = statement
-    console.log("test", test, "body", body)
-    while (C(test)(memory)) {
+    let upDatedState = [{ ...memory }, [...output]]
+    if (C(test)([memory, output])) {
       body.forEach((stmt) => {
-        console.log("in foreach : ", stmt)
-        S(stmt)(memory)
-        return [memory, output]
+        upDatedState = S(stmt)(upDatedState)
       })
+      return S(statement)(upDatedState)
     }
+    return [memory, output]
   } else if (statement.constructor === FunctionDeclaration) {
-    console.log("in function declation: ")
     const { name, parameters, body } = statement
     return [{ ...memory, [name]: { parameters, body } }, output]
-  } else if (Array.isArray(statement)) {
   }
 }
 
-const E = (expression) => (memory) => {
+const E = (expression) => (state) => {
   if (typeof expression === "number") {
     return expression
   } else if (typeof expression === "boolean") {
     return expression
   } else if (typeof expression == "string") {
     const i = expression
-    return memory[i]
+    return state[0][i]
   } else if (expression.constructor === Unary) {
-    return -E(expression)(memory)
+    return -E(expression)(state)
   } else if (expression.constructor === Binary) {
     const { op, left, right } = expression
     switch (op) {
       case "+":
-        return E(left)(memory) + E(right)(memory)
+        return E(left)(state) + E(right)(state)
       case "-":
-        return E(left)(memory) - E(right)(memory)
+        return E(left)(state) - E(right)(state)
       case "*":
-        return E(left)(memory) * E(right)(memory)
+        return E(left)(state) * E(right)(state)
       case "/":
-        return E(left)(memory) / E(right)(memory)
+        return E(left)(state) / E(right)(state)
       case "%":
-        return E(left)(memory) % E(right)(memory)
+        return E(left)(state) % E(right)(state)
       case "**":
-        return E(left)(memory) ** E(right)(memory)
+        return E(left)(state) ** E(right)(state)
     }
   } else if (expression.constructor === Call) {
     const { id, args } = expression
-    let body = memory[id].body
-    let params = memory[id].parameters
+    let body = state[0][id].body
+    let params = state[0][id].parameters
     for (let i = 0; i < args.length; i++) {
-      memory[params[i]] = args[i]
+      state[0][params[i]] = args[i]
     }
-    return E(body)(memory)
+    return E(body)(state)
   } else if (expression.constructor === Ternary) {
     const { test, consequence, alt } = expression
-    console.log("this is ternary: ", test, consequence, alt)
-    return C(test)(memory) ? E(consequence)(memory) : E(alt)(memory)
+    return C(test)(state) ? E(consequence)(state) : E(alt)(state)
   }
 }
 
-const C = (condition) => (memory) => {
+const C = (condition) => (state) => {
   if (condition === true) {
     return true
   } else if (condition === false) {
@@ -92,26 +90,25 @@ const C = (condition) => (memory) => {
     const { op, left, right } = condition
     switch (op) {
       case "==":
-        console.log("---------------checking condition")
-        return E(left)(memory) === E(right)(memory)
+        return E(left)(state) === E(right)(state)
       case "!=":
-        return E(left)(memory) !== E(right)(memory)
+        return E(left)(state) !== E(right)(state)
       case "<":
-        return E(left)(memory) < E(right)(memory)
+        return E(left)(state) < E(right)(state)
       case "<=":
-        return E(left)(memory) <= E(right)(memory)
+        return E(left)(state) <= E(right)(state)
       case ">":
-        return E(left)(memory) >= E(right)(memory)
+        return E(left)(state) >= E(right)(state)
       case ">=":
-        return E(left)(memory) >= E(right)(memory)
+        return E(left)(state) >= E(right)(state)
       case "&&":
-        return C(left)(memory) && C(right)(memory)
+        return C(left)(state) && C(right)(state)
       case "||":
-        return C(left)(memory) || C(right)(memory)
+        return C(left)(state) || C(right)(state)
     }
   } else if (condition.constructor === Unary) {
     const { op, operand } = condition
-    return !C(operand)(memory)
+    return !C(operand)(state)
   }
 }
 
@@ -172,6 +169,7 @@ class Ternary {
     })
   }
 }
+
 class Call {
   constructor(id, args) {
     Object.assign(this, {
@@ -203,8 +201,13 @@ const or = (x, y) => new Binary("||", x, y)
 const ternary = (t, c, a) => new Ternary(t, c, a)
 const call = (i, a) => new Call(i, a)
 
-// console.log(interpret(program([vardec("x", 2), print("x")])))
+///////////////////////
+/////// TESTS /////////
+///////////////////////
 
+// Expected value [ 2 ]
+console.log(interpret(program([vardec("x", 2), print("x")])))
+// Expected value [ 3, 5, 7, 9 ]
 console.log(
   P(
     program([
@@ -213,18 +216,18 @@ console.log(
     ])
   )
 )
-
-// console.log(
-//   P(
-//     program([
-//       fundec("add", ["a", "b"], plus("a", "b")),
-//       vardec("x", 3),
-//       vardec("y", plus("x", 10)),
-//       assign("x", 11),
-//       print(call("add", [1, 2])),
-//       print(ternary(eq(1, 2), true, false)),
-//       print("x"),
-//       print("y"),
-//     ])
-//   )
-// )
+// Expected value [ 3, false, 11, 13 ]
+console.log(
+  P(
+    program([
+      fundec("add", ["a", "b"], plus("a", "b")),
+      vardec("x", 3),
+      vardec("y", plus("x", 10)),
+      assign("x", 11),
+      print(call("add", [1, 2])),
+      print(ternary(eq(1, 2), true, false)),
+      print("x"),
+      print("y"),
+    ])
+  )
+)
