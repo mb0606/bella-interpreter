@@ -209,7 +209,7 @@ const call = (i, a) => new Call(i, a)
 console.log(interpret(program([vardec("x", 2), print("x")])))
 // Expected value [ 3, 5, 7, 9 ]
 console.log(
-  P(
+  interpret(
     program([
       vardec("x", 3),
       whileLoop(less("x", 10), [print("x"), assign("x", plus("x", 2))]),
@@ -218,7 +218,7 @@ console.log(
 )
 // Expected value [ 3, false, 11, 13 ]
 console.log(
-  P(
+  interpret(
     program([
       fundec("add", ["a", "b"], plus("a", "b")),
       vardec("x", 3),
